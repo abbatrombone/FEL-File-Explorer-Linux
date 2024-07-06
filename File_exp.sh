@@ -1,5 +1,40 @@
 #!/usr/bin/env bash
 
+#####################################
+# NOTE                              #
+#####################################
+
+#Color   Description
+#Bold Blue   Directories.
+#Uncolored   File or multi-hard link.
+#Bold Cyan   A symbolic link pointing to a file.
+#Bold Green  An executable file (scripts with having an .sh extension).
+#Bold Red    Archive file (mostly a tarball or zip file).
+#Magenta Indicates images and video files.
+#Cyan    Audio files.
+#Yellow with black bg    A pipe file (known as FIFO).
+#Blod red with black bg  A broken symbolic link.
+#Uncolored (white) with red bg   Indicates set-user-ID file.
+#Black with yellow bg    Indicates set-group-ID file.
+#White with blue bg  Shows a sticky directory.
+#Blue with green bg  Points to Other-writable directory
+#Black with green bg When a directory has characteristics of both sticky and other-writable directories.
+#Gray is a temp file
+
+#####################################
+# BUGS                              #
+#####################################
+
+# might have issues with files with next line charater
+# refresh means you need to exit multiple times
+
+#####################################
+# Imporovements                     #
+#####################################
+
+#val=FoOz
+#[[ ${val,,*} == fooz ]] && echo true
+
 tput civis # makes cursor invisable
 
 if ! org.gnome.desktop.peripherals.keyboard repeat false || ! xset r off || ! xset -r 111 r off || ! xset -r 116 r off ; then
@@ -79,41 +114,115 @@ case $XDG_CURRENT_DESKTOP in
 
     "Cinnamon")
     xset r on
-    #xset -r 111 r off
-    #xset -r 116 r off
     ;;
 
     "Deepin")
     xset r on
-    #xset -r 111 r off
-    #xset -r 116 r off
     ;;
 
     "MATE")
     xset r on
-    #xset -r 111 r off
-    #xset -r 116 r off
     ;;
 
     "Xfce")
     xset r on
-    #xset -r 111 r off
-    #xset -r 116 r off
     ;;
     
     "Pantheon")
     xset r on
-    #xset -r 111 r off
-    #xset -r 116 r off
     ;;
 
     "Budgie")
     xset r on
-    #xset -r 111 r off
-    #xset -r 116 r off
     ;;
 esac
 fi
+}
+GIT(){
+if [[ ! -d "$Dir/.git" ]]; then
+    clear; stty sane
+    git init;
+    git add README.md; 
+    echo "Type what you want the comment to be";
+    read -r comment
+    git commit -m "$comment";
+    git add .;
+    git status;
+    git branch -M main;
+    #$Dir/.git/config
+    echo "paste you github key. Make sure it has the correct permissions"
+    read -r gitkey
+    echo "Username"
+    read -r username
+    echo "projectname"
+    read -r projectname
+    filepath="url = https://github.com/$username/$projectname"
+    correctfilepath="url = https://$gitkey@github.com/$username/$projectname.git"
+    git remote add origin https://github.com/"$username"/"$projectname"
+    # left is what its looking for, right is what is being changed.
+    git remote add origin main https://github.com/"$username"/"$projectname"; # first time updates git 2nd time runs it correctly
+    #sed -i "s#https://github.com/abbatrombone/testprj#teststing#" config
+     sed -i "s#https://github.com/$username/$projectname#teststing#" $Dir/.git/config
+    git push -u origin main;
+    EXIT;
+elif [[ -d "$Dir/.git" ]]; then
+    clear;
+    stty -echo; echo -n $'\e[6n'; read -d R z; stty echo;
+    IFS=";" read -ra pos <<< "${z#??}"
+    unset IFS
+    
+    yesno=(
+    "yes"
+    "no"
+            )
+    yesnocur=0
+    yesnocount=${#yesno[@]} 
+    yesnoindex=0
+    esc=$(echo -en "\e") # cache ESC as test doesn't allow esc codes
+    
+    echo "Do you need a new key?:"
+    while true
+    do
+        yesnoindex=0 
+        for a in "${yesno[@]}"
+        do
+            if [ "$yesnoindex" == "$yesnocur" ]
+            then tput cup "${pos[0]}" 1; echo -en " >$a " # mark & highlight the current option
+            else tput cup "${pos[0]}" 7; echo -en " $a "
+
+            fi
+            yesnoindex=$(( $yesnoindex + 1 ))
+        done
+        read -s -n3 yesnokey # wait for user to key in arrows or ENTER
+        if [[ $yesnokey == $esc[D ]] # right arrow
+        then yesnocur=$(( $yesnocur - 1 ))
+            [ "$yesnocur" -lt 0 ] && yesnocur=$(( $yesnocount - 1 ))
+        elif [[ $yesnokey == $esc[C ]] # left arrow
+        then yesnocur=$(( $yesnocur + 1 ))
+            [ "$yesnocur" -ge $yesnocount ] && yesnocur=0 
+        elif [[ $yesnokey == "" ]] # nothing, i.e the read delimiter - ENTER
+        then break
+        fi
+        echo -en "\e[${yesnocount}A" # go up to the beginning to re-render
+    done
+
+echo "Selected choice: ${yesno[$yesnocur]}"
+
+    if [[ "${yesno[$yesnocur]}" == "yes" ]]; then
+        echo "paste you github key. Make sure it has the correct permissions"
+        read -r gitkey
+    fi
+    filepath="url = https://github.com/$username/$projectname"
+    correctfilepath="url = https://$gitkey@github.com/$username/$projectname.git"
+    git add .
+    sleep 1
+    git status;
+    sleep 1
+    git remote add origin main https://github.com/"$username"/"$projectname";
+    sleep 1
+    git push -u origin main;
+fi
+
 }
 ctrl_c() { tput cup $Middle 1; echo -e "\ec\e[37;40mCtrl + C has been disabled for this script"; };
 TPUT(){ echo -en "\e[${1};${2}H";}
@@ -136,6 +245,7 @@ BOX(){ for (( x = 1; x <= LINES; x++ )); do
       done
      done;  };
 EXIT() { autocomplete_on; tput cvvis; stty sane echo; clear; exit;}; #Custom
+
 
 # Makes Menu options
 IFS=''
@@ -306,6 +416,8 @@ function choose_from_menu() {
         then cd .. && bash ~/File_exp.sh;
         elif [[ $key == "ref" || $key == "REF" || $key == "Ref" ]]; #keyshortcut refresh
         then xdotool key --sync 'F5'
+        elif [[ $key == "git" || $key == "GIT" || $key == "Git" ]]; #keyshortcut git
+            then GIT
         fi
         echo -en "\e[${count}A" # go up to the beginning to re-render
 
@@ -329,3 +441,83 @@ else cd & cd "$trimmed_selected_choice"; sleep 2; bash ~/File_exp.sh
 fi
 
 clear;
+
+: '
+
+IFS=''
+ archive_files=( $( find "$next2" -maxdepth 1 -type f -name "*.a" -o -name "*.ar" -o -name "*.cpio" -o -name "*.shar" -o -name "*.tar" -o -name "*.zip" -o -name "*.rar" -o -name "*.7z" -o -name "*.pkg" -o -name "*.deb" -o -name "*.msu" -o -name "*.cab" -o -name "*.ear" -o -name "*.jar" -o -name "*.war" -o -name "*.phar" -o -name "*.zipx" -o -name "*.rarx" -o -name "*.7zx" -o -name "*.lzma" -o -name "*.xz" -o -name "*.zst" -o -name "*.lz4" -o -name "*.zlib" -o -name "*.ecsbx" -o -name "*.par" -o -name "*.par2" -o -name "*.rev" -o -name "*.LBR" -o -name "*.LQR" -o -name "*.SDA" -o -name "*.SFX" -o -name "*.YZ1"  ) )
+unset IFS 
+
+readarray -t sorted_archive < <(IFS=$'\n'; sort <<<"${archive_files[*]}")
+for ((afi=0; afi<${#sorted_archive[@]}; afi++)); do
+  sorted_archive[afi]=${sorted_archive[afi]:2}
+  sorted_archive[afi]="\033[0;31m\033[40m${sorted_archive[afi]}\033[0m";
+  #echo -e " $afi ${sorted_archive[afi]} "
+done
+unset IFS
+
+IFS=''
+ imagie_files=( $( find "$next2" -maxdepth 1 -type f -name "*.bmp" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" -o -name "*.pen" -o -name "*.tif" -o -name "*.tiff" -o -name "*.gif" -o -name "*.svg" -o -name "*.ai" -o -name "*.raw" -o -name "*.cr2" -o -name "*.nef" -o -name "*.MP4" -o -name "*.AVI" -o -name "*.MOV" -o -name "*.WMV" -o -name "*.FLV") )
+unset IFS 
+
+readarray -t sorted_imagie < <(IFS=$'\n'; sort <<<"${imagie_files[*]}")
+for ((si=0; si<${#sorted_imagie[@]}; si++)); do
+   sorted_imagie[si]=${sorted_imagie[si]:2}
+  sorted_imagie[si]="\033[0;35m\033[40m${sorted_imagie[si]}\033[0m";
+  #echo -e " $si ${sorted_imagie[si]} "
+done
+unset IFS
+
+IFS=''
+ temp_files=( $( find "$next2" -maxdepth 1 ! -name . ! -name .. -print | sort | awk '/.tmp/' ) )
+unset IFS 
+
+readarray -t sorted_temp < <(IFS=$'\n'; sort <<<"${temp_files[*]}")
+for ((sti=0; sti<${#sorted_temp[@]}; sti++)); do
+  sorted_temp[sti]=${sorted_temp[sti]:2}
+  sorted_temp[sti]="\033[0;37m\033[40m${sorted_temp[sti]}\033[0m";
+  #echo -e " $sti ${sorted_temp[sti]} "
+done
+unset IFS
+
+IFS=''
+executable_files=( $(find "$next2" -maxdepth 1 -type f -perm -u+x ) )
+unset IFS 
+
+readarray -t sorted_executable < <(IFS=$'\n'; sort <<<"${executable_files[*]}")
+for ((sti=0; sti<${#sorted_executable[@]}; sti++)); do
+  sorted_executable[sti]=${sorted_executable[sti]:2}
+  sorted_executable[sti]="\033[0;32m\033[40m${sorted_executable[sti]}\033[0m";
+  #echo -e " $sti ${sorted_executable[sti]} "
+done
+unset IFS
+
+IFS=''
+all_files=( $(find tput cup $((4+fp)) 150; -maxdepth 1 -type f ) )
+unset IFS 
+
+array+=${sorted_archive[@]}
+array+=" "
+array+=${sorted_imagie[@]}
+array+=" "
+array+=${sorted_temp[@]}
+array+=" "
+array+=${sorted_executable[@]}
+
+readarray -t sorted_all < <(IFS=$'\n'; sort <<<"${all_files[*]}")
+for ((a=0; a<${#sorted_all[@]}; a++)); do
+  sorted_all[a]=${sorted_all[a]:2}
+  if [[ ! " ${sorted_all[a]} " =~ " ${array[@]} " ]]; then
+    echo -e "${sorted_all[a]} "
+fi
+  
+done
+unset IFS
+
+find . -maxdepth 1 -type f \( -not -perm -u+x -a -not -name "*.bmp" -a -not -name "*.jpg" -a -not -name "*.jpeg" -a -not -name "*.png" -a -not -name "*.pen" -a -not -name "*.tif" -a -not -name "*.tiff" -a -not -name "*.gif" -a -not -name "*.svg" -a -not -name "*.ai" -a -not -name "*.raw" -a -not -name "*.cr2" -a -not -name "*.nef" -a -not -name "*.MP4" -a -not -name "*.AVI" -a -not -name "*.MOV" -a -not -name "*.WMV" -a -not -name "*.FLV" -a -not -name "*.a" -a -not -name "*.ar" -a -not -name "*.cpio" -a -not -name "*.shar" -a -not -name "*.tar" -a -not -name "*.zip" -a -not -name "*.rar" -a -not -name "*.7z" -a -not -name "*.pkg" -a -not -name "*.deb" -a -not -name "*.msu" -a -not -name "*.cab" -a -not -name "*.ear" -a -not -name "*.jar" -a -not -name "*.war" -a -not -name "*.phar" -a -not -name "*.zipx" -a -not -name "*.rarx" -a -not -name "*.7zx" -a -not -name "*.lzma" -a -not -name "*.xz" -a -not -name "*.zst" -a -not -name "*.lz4" -a -not -name "*.zlib" -a -not -name "*.ecsbx" -a -not -name "*.par" -a -not -name "*.par2" -a -not -name "*.rev" -a -not -name "*.LBR" -a -not -name "*.LQR" -a -not -name "*.SDA" -a -not -name "*.SFX" -a -not -name "*.YZ1" -a -not -name "*.tmp" \) -and -not -name "*.tmp" -and -not -type d
+
+##exclude everying already used for the remainder?
+find . -maxdepth 1 -type f -perm -u-x -o ! -name "*.bmp" -o ! -name "*.jpg" -o ! -name "*.jpeg" -o ! -name "*.png" -o ! -name "*.pen" -o ! -name "*.tif" -o ! -name "*.tiff" -o ! -name "*.gif" -o ! -name "*.svg" -o ! -name "*.ai" -o ! -name "*.raw" -o ! -name "*.cr2" -o ! -name "*.nef" -o ! -name "*.MP4" -o ! -name "*.AVI" -o ! -name "*.MOV" -o ! -name "*.WMV" -o ! -name "*.FLV" -o ! -name "*.a" -o ! -name "*.ar" -o ! -name "*.cpio" -o ! -name "*.shar" -o ! -name "*.tar" -o ! -name "*.zip" -o ! -name "*.rar" -o ! -name "*.7z" -o ! -name "*.pkg" -o ! -name "*.deb" -o ! -name "*.msu" -o ! -name "*.cab" -o ! -name "*.ear" -o ! -name "*.jar" -o ! -name "*.war" -o ! -name "*.phar" -o ! -name "*.zipx" -o ! -name "*.rarx" -o ! -name "*.7zx" -o ! -name "*.lzma" -o ! -name "*.xz" -o ! -name "*.zst" -o ! -name "*.lz4" -o ! -name "*.zlib" -o ! -name "*.ecsbx" -o ! -name "*.par" -o ! -name "*.par2" -o ! -name "*.rev" -o ! -name "*.LBR" -o ! -name "*.LQR" -o ! -name "*.SDA" -o ! -name "*.SFX" -o ! -name "*.YZ1"
+
+'
+
